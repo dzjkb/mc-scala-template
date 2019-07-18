@@ -8,6 +8,10 @@ import org.bukkit.Material
 
 class Example extends JavaPlugin with Runnable {
 
+    val debug = true
+
+    def dbg(msg: String): Unit = if (debug) getLogger().info(msg)
+
     override def onEnable: Unit = {
         getLogger().info("Enabling example plugin")
         // this.getServer().getScheduler().scheduleAsyncDelayedTask(this, new CustomSpawner(this), 20)
@@ -16,8 +20,10 @@ class Example extends JavaPlugin with Runnable {
 
     override def onDisable: Unit = getLogger().info("Disabling example plugin")
 
-    def run(): Unit =
-        this.getServer().getOnlinePlayers() forEach { player => waterLog(player) }
+    def run(): Unit = {
+        this.getServer().getOnlinePlayers() forEach waterLog
+        this.getServer().getScheduler().scheduleSyncDelayedTask(this, this, 20)
+    }
 
     def waterLog(player: Player) = {
         val playerLoc = player.getLocation()
@@ -31,6 +37,7 @@ class Example extends JavaPlugin with Runnable {
         ) {
             val b = player.getWorld().getBlockAt(pX + x, pY + y, pZ + z)
             if (b.getType() == Material.AIR) {
+                this.dbg(s"Waterlogging at ${pX + x}, ${pY + y}, ${pZ + z}")
                 setWaterlogged(b)
             }
             
@@ -39,15 +46,18 @@ class Example extends JavaPlugin with Runnable {
 
     def setWaterlogged(b: Block): Unit = {
         b.setType(Material.SIGN)
-        val bData = b.getBlockData().asInstanceOf[Waterlogged]
-        bData.setWaterlogged(true)
+        val bs = b.getState()
+        val bd = bs.getBlockData().asInstanceOf[Waterlogged]
+        bd.setWaterlogged(true)
+        bs.setBlockData(bd)
+        bs.update(true)
     }
 }
 
-class CustomSpawner(val plugin: JavaPlugin) extends Runnable {
+class CustomSpawner(val plugin: Example) extends Runnable {
 
     def run(): Unit = {
-        this.plugin.getLogger().info("Running custom spawner")
+        this.plugin.dbg("Running custom spawner")
         // try to spawn sum mobs?
 
         this.plugin.getServer().getScheduler().scheduleAsyncDelayedTask(this.plugin, this, 20)
